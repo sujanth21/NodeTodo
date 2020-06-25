@@ -1,11 +1,27 @@
 const express = require("express");
+const mongodb = require("mongodb");
 
 const app = express();
+let db;
+
+const connectionString =
+  "mongodb+srv://admin:admin@ecommlearning-klhpf.mongodb.net/TodoApp?retryWrites=true&w=majority";
+mongodb.connect(
+  connectionString,
+  { useNewUrlParser: true, useUnifiedTopology: true },
+  (err, client) => {
+    db = client.db();
+  }
+);
 
 app.use(express.urlencoded({ extended: false }));
+app.use(express.static("public"));
 
 app.get("/", (req, res) => {
-  res.send(`<!DOCTYPE html>
+  db.collection("items")
+    .find()
+    .toArray((err, items) => {
+      res.send(`<!DOCTYPE html>
   <html>
   <head>
     <meta charset="UTF-8">
@@ -27,38 +43,31 @@ app.get("/", (req, res) => {
       </div>
       
       <ul class="list-group pb-5">
-        <li class="list-group-item list-group-item-action d-flex align-items-center justify-content-between">
-          <span class="item-text">Fake example item #1</span>
-          <div>
-            <button class="edit-me btn btn-secondary btn-sm mr-1">Edit</button>
-            <button class="delete-me btn btn-danger btn-sm">Delete</button>
-          </div>
-        </li>
-        <li class="list-group-item list-group-item-action d-flex align-items-center justify-content-between">
-          <span class="item-text">Fake example item #2</span>
-          <div>
-            <button class="edit-me btn btn-secondary btn-sm mr-1">Edit</button>
-            <button class="delete-me btn btn-danger btn-sm">Delete</button>
-          </div>
-        </li>
-        <li class="list-group-item list-group-item-action d-flex align-items-center justify-content-between">
-          <span class="item-text">Fake example item #3</span>
-          <div>
-            <button class="edit-me btn btn-secondary btn-sm mr-1">Edit</button>
-            <button class="delete-me btn btn-danger btn-sm">Delete</button>
-          </div>
-        </li>
+        ${items
+          .map((item) => {
+            return `<li class="list-group-item list-group-item-action d-flex align-items-center justify-content-between">
+            <span class="item-text">${item.text}</span>
+            <div>
+              <button class="edit-me btn btn-secondary btn-sm mr-1">Edit</button>
+              <button class="delete-me btn btn-danger btn-sm">Delete</button>
+            </div>
+          </li>`;
+          })
+          .join("")}
       </ul>
       
     </div>
     
+    <script src="./browser.js"></script>
   </body>
   </html>`);
+    });
 });
 
 app.post("/create-item", (req, res) => {
-  console.log(req.body.item);
-  res.send("Thank you for submitting the form");
+  db.collection("items").insertOne({ text: req.body.item }, () => {
+    res.redirect("/");
+  });
 });
 
 const PORT = process.env.PORT || 5000;
